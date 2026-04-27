@@ -166,6 +166,32 @@ jsTester.run("no-legacy-literal (js)", rule, {
     // === Equality with non-comparison binary ops — must NOT fire ===
     // (only ===, !==, ==, != are slug-context comparisons; `+` is concat).
     { code: `const x = "prefix-" + "homeready";` },
+
+    // === SHORT-FORM NARROWING (v0.2.0 amendment) ===
+    // Short-form aliases (scout, drumbeat, oven, newsletter, pathfinder,
+    // the-home-scout) collide with English words (a "scout" is a kid; an
+    // "oven" is an appliance; "drumbeat" is a metaphor), Scout's ToolSlug
+    // namespace ("newsletter" = a tool slug), HH's PipelineStep state-machine
+    // ("newsletter" = pipeline step), and UTM display labels. Cases #1-3
+    // (CallExpression / BinaryExpression / SwitchCase) on short forms can't
+    // be disambiguated from these non-slug uses without type-info, so v0.2.0
+    // narrows: short forms fire only in case #4 (typed VariableDeclarator).
+    // Case #4 still fires on short forms because the slug-typed annotation
+    // is unambiguous slug-context.
+
+    // HH's actual `currentStep === "newsletter"` PipelineStep state-machine
+    // comparison from src/components/lab/LabPipelineView.tsx — must NOT fire.
+    { code: `if (currentStep === "newsletter") {}` },
+    { code: `if (currentStep !== "newsletter") {}` },
+    { code: `switch (step) { case "newsletter": break; }` },
+    // Function-call argument with short-form literal — must NOT fire (Scout's
+    // own Newsletter Signup tool registration paths use this shape).
+    { code: `enableTool("newsletter");` },
+    { code: `enableTool("scout");` },
+    { code: `enableTool("drumbeat");` },
+    { code: `enableTool("oven");` },
+    { code: `enableTool("pathfinder");` },
+    { code: `enableTool("the-home-scout");` },
   ],
 
   invalid: [
@@ -372,37 +398,11 @@ jsTester.run("no-legacy-literal (js)", rule, {
       output: `getApp("pathfinder-pro");`,
     },
 
-    // Shortened / drop-prefix (in slug-context position only)
-    {
-      code: `getApp("scout");`,
-      errors: [{ messageId: "legacyLiteral" }],
-      output: `getApp("home-scout");`,
-    },
-    {
-      code: `getApp("drumbeat");`,
-      errors: [{ messageId: "legacyLiteral" }],
-      output: `getApp("the-drumbeat");`,
-    },
-    {
-      code: `getApp("oven");`,
-      errors: [{ messageId: "legacyLiteral" }],
-      output: `getApp("the-oven");`,
-    },
-    {
-      code: `getApp("newsletter");`,
-      errors: [{ messageId: "legacyLiteral" }],
-      output: `getApp("newsletter-studio");`,
-    },
-    {
-      code: `getApp("pathfinder");`,
-      errors: [{ messageId: "legacyLiteral" }],
-      output: `getApp("pathfinder-pro");`,
-    },
-    {
-      code: `getApp("the-home-scout");`,
-      errors: [{ messageId: "legacyLiteral" }],
-      output: `getApp("home-scout");`,
-    },
+    // (Short-form aliases — scout, drumbeat, oven, newsletter, pathfinder,
+    // the-home-scout — are NOT invalid in CallExpression / BinaryExpression /
+    // SwitchCase positions per v0.2.0's short-form narrowing. They are
+    // covered as INVALID under case #4 in the TS test block below where
+    // `const x: AppSlug = "scout"` fires unambiguously.)
 
     // Function-arg with NewExpression
     {
@@ -641,6 +641,75 @@ tsTester.run("no-legacy-literal (ts)", rule, {
       output: `
         type SourceAppIdentifier = string;
         const s: SourceAppIdentifier = "home-ready";
+      `,
+    },
+
+    // === Short-form aliases in case #4 — DO fire (slug-typed context is
+    // unambiguous regardless of literal shape) ===
+    {
+      code: `
+        type AppSlug = string;
+        const x: AppSlug = "scout";
+      `,
+      errors: [{ messageId: "legacyLiteral" }],
+      output: `
+        type AppSlug = string;
+        const x: AppSlug = "home-scout";
+      `,
+    },
+    {
+      code: `
+        type AppSlug = string;
+        const x: AppSlug = "newsletter";
+      `,
+      errors: [{ messageId: "legacyLiteral" }],
+      output: `
+        type AppSlug = string;
+        const x: AppSlug = "newsletter-studio";
+      `,
+    },
+    {
+      code: `
+        type AppSlug = string;
+        const x: AppSlug = "drumbeat";
+      `,
+      errors: [{ messageId: "legacyLiteral" }],
+      output: `
+        type AppSlug = string;
+        const x: AppSlug = "the-drumbeat";
+      `,
+    },
+    {
+      code: `
+        type AppSlug = string;
+        const x: AppSlug = "oven";
+      `,
+      errors: [{ messageId: "legacyLiteral" }],
+      output: `
+        type AppSlug = string;
+        const x: AppSlug = "the-oven";
+      `,
+    },
+    {
+      code: `
+        type AppSlug = string;
+        const x: AppSlug = "pathfinder";
+      `,
+      errors: [{ messageId: "legacyLiteral" }],
+      output: `
+        type AppSlug = string;
+        const x: AppSlug = "pathfinder-pro";
+      `,
+    },
+    {
+      code: `
+        type AppSlug = string;
+        const x: AppSlug = "the-home-scout";
+      `,
+      errors: [{ messageId: "legacyLiteral" }],
+      output: `
+        type AppSlug = string;
+        const x: AppSlug = "home-scout";
       `,
     },
 

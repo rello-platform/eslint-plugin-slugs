@@ -14,10 +14,12 @@ The v0.1.0 rule fired on every string Literal whose value matched the legacy reg
 
 v0.2.0 narrows fires to one of four AST-parent-context positions:
 
-1. **Comparison/equality operator** — `slug === "homestretch"`, `"homeready" !== app`.
-2. **Function-call / `new`-expression argument** — `getApp("homestretch")`, `new App("homeready")`.
-3. **Switch case value** — `case "homestretch":`.
-4. **Typed `VariableDeclarator` ancestor** — `const x: AppSlug = "homestretch"`, `const apps: Record<AppSlug, App> = { "homestretch": … }`. The walk reaches a `VariableDeclarator` through value-position-preserving containment (`Property`, `ObjectExpression`, `ArrayExpression`, `ConditionalExpression`, `TSAsExpression`, `TSNonNullExpression`, `ParenthesizedExpression`) and fires iff the binding's `typeAnnotation` references one of: `AppSlug`, `PlatformSlug`, `EngineSlug`, `SourceAppIdentifier`, including generic-parameter positions like `Record<AppSlug, X>` and `Array<PlatformSlug>`.
+1. **Comparison/equality operator** — `slug === "homestretch"`, `"homeready" !== app`. _Long-form aliases only._
+2. **Function-call / `new`-expression argument** — `getApp("homestretch")`, `new App("homeready")`. _Long-form aliases only._
+3. **Switch case value** — `case "homestretch":`. _Long-form aliases only._
+4. **Typed `VariableDeclarator` ancestor** — `const x: AppSlug = "homestretch"`, `const apps: Record<AppSlug, App> = { "homestretch": … }`. _Long and short forms both fire._ The walk reaches a `VariableDeclarator` through value-position-preserving containment (`Property`, `ObjectExpression`, `ArrayExpression`, `ConditionalExpression`, `TSAsExpression`, `TSNonNullExpression`, `ParenthesizedExpression`) and fires iff the binding's `typeAnnotation` references one of: `AppSlug`, `PlatformSlug`, `EngineSlug`, `SourceAppIdentifier`, including generic-parameter positions like `Record<AppSlug, X>` and `Array<PlatformSlug>`.
+
+**Short-form narrowing.** The drop-prefix aliases (`scout`, `drumbeat`, `oven`, `newsletter`, `pathfinder`, `the-home-scout`) collide with English words (an "oven" is an appliance), Scout's own `ToolSlug` namespace (`"newsletter"` = the Newsletter Signup tool), HH's `PipelineStep` state-machine values, and UTM display labels. Cases #1-3 cannot disambiguate `slug === "newsletter"` from `currentStep === "newsletter"` without type-info, so v0.2.0 restricts short forms to case #4 only. The downstream type-checker covers any real drift in case #1-3 short-form contexts via the slug-typed signature on the receiving function or operand.
 
 Bare untyped `const x = "homeready"` no longer fires. The trade-off: a few v0.1.0 fires on bare untyped declarations are now silent in exchange for closing the 31-false-positive class. Real platform-slug drift in those positions is caught by the downstream type system once the value flows into a `PlatformSlug`-typed signature, by the comparison/switch/CallExpression rules above when the value reaches a slug-context boundary, and by the existing `@rello-platform/slugs` compile-time exports on every consumer-side helper.
 
@@ -45,7 +47,7 @@ Identifiers and component names (`const HomeReady = …`, `<HomeReady />`) are n
 ## Install
 
 ```bash
-npm install --save-dev github:rello-platform/eslint-plugin-slugs#v0.2.0
+npm install --save-dev github:rello-platform/eslint-plugin-slugs#v0.2.1
 ```
 
 ## Use (flat config)
