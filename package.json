@@ -1,7 +1,7 @@
 {
   "name": "@rello-platform/eslint-plugin-slugs",
-  "version": "0.1.0",
-  "description": "ESLint rule that forbids hardcoded legacy slug literals in Rello-ecosystem source. Complements @rello-platform/slugs compile-time type guard with commit-time lint protection against drift at string-literal boundaries.",
+  "version": "0.2.0",
+  "description": "ESLint rule that forbids hardcoded legacy slug literals in real platform-slug-usage positions. Complements @rello-platform/slugs compile-time type guard with commit-time lint protection against drift at string-literal boundaries.",
   "main": "index.js",
   "files": [
     "index.js",
@@ -10,7 +10,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "test": "node --test tests/"
+    "test": "node tests/no-legacy-literal.test.js"
   },
   "keywords": [
     "eslint",
@@ -22,6 +22,7 @@
     "eslint": ">=8.0.0"
   },
   "devDependencies": {
+    "@typescript-eslint/parser": "^8.59.1",
     "eslint": "^9.39.4"
   },
   "repository": {
