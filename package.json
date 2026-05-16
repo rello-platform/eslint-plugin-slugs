@@ -1,6 +1,6 @@
 {
   "name": "@rello-platform/eslint-plugin-slugs",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "ESLint rule that forbids hardcoded legacy slug literals in real platform-slug-usage positions. Complements @rello-platform/slugs compile-time type guard with commit-time lint protection against drift at string-literal boundaries.",
   "main": "index.js",
   "files": [
@@ -32,6 +32,5 @@
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
   },
-  "license": "UNLICENSED",
-  "private": true
+  "license": "UNLICENSED"
 }
