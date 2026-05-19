@@ -1,6 +1,11 @@
 # @rello-platform/eslint-plugin-slugs
 
-ESLint plugin that forbids hardcoded legacy slug literals in real platform-slug-usage positions across the Rello ecosystem. Mechanical drift prevention at commit time, complementing the compile-time type guard exported by `@rello-platform/slugs`.
+ESLint plugin for the Rello ecosystem. Two rules:
+
+- **`no-legacy-literal`** — forbids hardcoded legacy slug literals (`HOMEREADY`, `MarketIntel`, `oven`, …) in real platform-slug-usage positions. Complements the compile-time type guard exported by `@rello-platform/slugs`.
+- **`no-wildcard-apikey-permissions`** — forbids `permissions: ["*"]` in ApiKey row construction (Prisma create / update / upsert payloads + module-scope literal rows). Layer 1 of the 3-layer defense-in-depth from `WILDCARD-APIKEY-DEPRECATION-CROSS-PLATFORM-SWEEP` (Prisma extension + Postgres CHECK constraint cover the runtime + DB surfaces).
+
+Mechanical drift prevention at commit time.
 
 ## Why
 
@@ -118,3 +123,40 @@ Tests run under both `espree` (default JS parser) and `@typescript-eslint/parser
 ## Versioning
 
 Tracks `@rello-platform/slugs`. Bumping the canonical list (new app, new engine) requires a corresponding bump to the `FORBIDDEN` map in `lib/rules/no-legacy-literal.js` and a sibling test case. Adding a new slug type that should anchor case #4 fires (e.g., a future `TenantSlug`) requires adding it to `SLUG_TYPE_NAMES` in the same file.
+
+---
+
+## `no-wildcard-apikey-permissions`
+
+Forbids `permissions: ["*"]` on ApiKey rows. Wildcard permissions bypass per-pair least-privilege isolation enforced by `validateApiKey` + `hasPermission` (see `~API-KEY-LIFECYCLE-README.md` §9). Layer 1 of the 3-layer defense-in-depth landed in `WILDCARD-APIKEY-DEPRECATION-CROSS-PLATFORM-SWEEP` DISPATCH-8. Layers 2-3 (Rello Prisma extension + Postgres CHECK constraint) cover runtime + DB surfaces that bypass static analysis (raw SQL, ORM-less inserts, scripts that construct rows from runtime values).
+
+### Fire conditions
+
+The rule fires when:
+
+1. The `permissions` Property's value is an `ArrayExpression` containing a `"*"` string literal (or static template literal `` `*` ``).
+2. AND the parent ObjectExpression looks like ApiKey row construction:
+   - **Shape A — sibling ApiKey field names.** The enclosing object has at least one other Property whose key is one of: `appSource`, `targetApp`, `key`, `name`, `tenantId`, `isActive`, `expiresAt`, `lastUsedAt`, `id`.
+   - **Shape B — Prisma write-call payload.** The enclosing object is the value of a parent Property whose key is `data`, `create`, or `update` (covers `prisma.apiKey.create`, `prisma.apiKey.update`, `prisma.apiKey.upsert`).
+
+### Must-not-fire
+
+Unrelated objects carrying `permissions: ["*"]` (rate-limit allow-lists, filesystem glob patterns, policy objects) are silent. The narrow parent-context match avoids false-positive collisions.
+
+### No autofix
+
+There is no canonical replacement — wildcard expansion requires the caller to enumerate the actual least-privilege slugs the call site needs. Import the canonical slug constants from `@rello-platform/permissions`.
+
+### Inline exemption (rare)
+
+If a legitimately-non-ApiKey object happens to carry the ApiKey-resembling shape (`appSource` + `permissions: ["*"]`) and your call site actually wants `"*"` to mean "all", add an inline disable with rationale:
+
+```ts
+// eslint-disable-next-line @rello-platform/slugs/no-wildcard-apikey-permissions -- not an ApiKey row; this is the engine-broadcast all-tenants fanout target
+const broadcast = { appSource: "MILO_ENGINE", permissions: ["*"] };
+```
+
+### Related
+
+- `~API-KEY-LIFECYCLE-README.md` §9.2 names the three planned defense-in-depth layers verbatim.
+- `WILDCARD-APIKEY-DEPRECATION-CROSS-PLATFORM-SWEEP/ANSWERS.md` DL-SPEC-Q5 (NONE carve-outs) and DL-SPEC-Q6 (combination mechanism) lock the binding spec.
